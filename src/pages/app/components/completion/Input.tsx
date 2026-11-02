@@ -1,4 +1,4 @@
-import { Loader2, XIcon } from "lucide-react";
+import { Loader2, XIcon, MicIcon, StopCircleIcon } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -12,6 +12,7 @@ import {
 } from "@/components";
 import { UseCompletionReturn } from "@/types";
 import { MessageHistory } from "./MessageHistory";
+import { useMicSTT } from "@/hooks/useMicSTT";
 
 export const Input = ({
   isPopoverOpen,
@@ -35,8 +36,46 @@ export const Input = ({
   keepEngaged,
   setKeepEngaged,
 }: UseCompletionReturn & { isHidden: boolean }) => {
+  const { micState, startMic, stopMic } = useMicSTT();
+  const isRecording = micState === "recording" || micState === "transcribing";
+
+  const handleMicClick = async () => {
+    if (isRecording) {
+      stopMic();
+      return;
+    }
+    const transcript = await startMic(10);
+    if (transcript) {
+      setInput((prev) => (prev ? prev + " " + transcript : transcript));
+      setTimeout(() => inputRef?.current?.focus(), 50);
+    }
+  };
   return (
-    <div className="relative flex-1">
+    <div className="relative flex-1 flex items-center gap-1.5">
+      {/* Mic button */}
+      <Button
+        size="icon"
+        variant={isRecording ? "destructive" : "outline"}
+        className="shrink-0 h-8 w-8"
+        title={
+          micState === "recording"
+            ? "Recording… click to stop"
+            : micState === "transcribing"
+            ? "Transcribing…"
+            : "Record voice input"
+        }
+        disabled={isLoading || isHidden || micState === "transcribing"}
+        onClick={handleMicClick}
+      >
+        {micState === "transcribing" ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : isRecording ? (
+          <StopCircleIcon className="h-3.5 w-3.5" />
+        ) : (
+          <MicIcon className="h-3.5 w-3.5" />
+        )}
+      </Button>
+      <div className="relative flex-1">
       <Popover
         open={isPopoverOpen}
         onOpenChange={(open) => {
@@ -210,6 +249,7 @@ export const Input = ({
           </ScrollArea>
         </PopoverContent>
       </Popover>
+    </div>
     </div>
   );
 };

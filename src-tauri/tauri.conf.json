@@ -49,6 +49,9 @@
       "info.plist",
       "f1ck_OA.desktop"
     ],
+    "externalBin": [
+      "binaries/moonshine-voice"
+    ],
     "macOS": {
       "minimumSystemVersion": "10.13"
     }

@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Tauri sidecar binaries (downloaded at CI build time)
+src-tauri/binaries/moonshine-voice-*

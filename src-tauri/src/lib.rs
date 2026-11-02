@@ -3,6 +3,7 @@ mod activate;
 mod api;
 mod capture;
 mod db;
+mod mic;
 mod shortcuts;
 mod window;
 use std::sync::{Arc, Mutex};
@@ -114,6 +115,7 @@ pub fn run() {
             speaker::get_audio_sample_rate,
             speaker::get_input_devices,
             speaker::get_output_devices,
+            mic::mic_record_and_transcribe,
         ])
         .setup(|app| {
             // Setup main window positioning
