@@ -46,7 +46,8 @@ export const Input = ({
     }
     const transcript = await startMic(10);
     if (transcript) {
-      setInput((prev) => (prev ? prev + " " + transcript : transcript));
+      const current = inputRef?.current?.value ?? "";
+      setInput(current ? current + " " + transcript : transcript);
       setTimeout(() => inputRef?.current?.focus(), 50);
     }
   };
