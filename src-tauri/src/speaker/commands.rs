@@ -503,6 +503,13 @@ pub async fn manual_stop_continuous(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub fn check_system_audio_access(_app: AppHandle) -> Result<bool, String> {
+    // On Linux, PulseAudio/PipeWire is always accessible without special permissions.
+    // We attempt a quick probe but always return true so the UI never blocks with
+    // a "Setup Required" screen — the actual source selection happens at capture time.
+    #[cfg(target_os = "linux")]
+    return Ok(true);
+
+    #[cfg(not(target_os = "linux"))]
     match SpeakerInput::new() {
         Ok(_) => Ok(true),
         Err(e) => {

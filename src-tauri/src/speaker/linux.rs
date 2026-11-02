@@ -431,7 +431,57 @@ impl SpeakerStream {
 }
 
 fn get_default_monitor_source() -> Option<String> {
-    Some("@DEFAULT_MONITOR@".to_string())
+    // On Linux with PipeWire/PulseAudio, prefer the microphone (default input source)
+    // over the monitor (loopback of speaker output). The monitor is often SUSPENDED
+    // when no audio is playing and PipeWire won't wake it for recording.
+    // The default input source (microphone) always works for voice input.
+    get_default_input_source()
+        .or_else(|| Some("@DEFAULT_SOURCE@".to_string()))
+}
+
+fn get_default_input_source() -> Option<String> {
+    let done_rc = std::rc::Rc::new(std::cell::RefCell::new(false));
+    let result_rc: std::rc::Rc<std::cell::RefCell<Option<String>>> =
+        std::rc::Rc::new(std::cell::RefCell::new(None));
+
+    let mut mainloop = Mainloop::new()?;
+    let mut context = Context::new(&mainloop, "f1ck_OA-source-probe")?;
+    context
+        .connect(None, pulse::context::FlagSet::NOFLAGS, None)
+        .ok()?;
+
+    loop {
+        match mainloop.iterate(true) {
+            pulse::mainloop::standard::IterateResult::Success(_) => {}
+            _ => break,
+        }
+        match context.get_state() {
+            pulse::context::State::Ready => break,
+            pulse::context::State::Failed | pulse::context::State::Terminated => return None,
+            _ => {}
+        }
+    }
+
+    let r2 = result_rc.clone();
+    let d2 = done_rc.clone();
+    let introspector = context.introspect();
+    let _op = introspector.get_server_info(move |info| {
+        if let Some(name) = &info.default_source_name {
+            *r2.borrow_mut() = Some(name.to_string());
+        }
+        *d2.borrow_mut() = true;
+    });
+
+    while !*done_rc.borrow() {
+        match mainloop.iterate(true) {
+            pulse::mainloop::standard::IterateResult::Success(_) => {}
+            _ => break,
+        }
+    }
+
+    let source = result_rc.borrow().clone();
+    context.disconnect();
+    source
 }
 
 impl Drop for SpeakerStream {
